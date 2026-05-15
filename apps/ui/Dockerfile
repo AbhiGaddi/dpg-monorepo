@@ -36,9 +36,6 @@ FROM base AS builder
 
 WORKDIR /app
 
-ARG VITE_DEFAULT_API_URL
-ENV VITE_DEFAULT_API_URL=${VITE_DEFAULT_API_URL}
-
 COPY --from=deps /app/ ./
 COPY --from=pruner /repo/out/full/ ./
 

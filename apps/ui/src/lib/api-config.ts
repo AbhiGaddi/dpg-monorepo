@@ -4,6 +4,19 @@ interface ApiEndpoint {
   url: string;
 }
 
+interface RuntimeConfig {
+  VITE_DEFAULT_API_URL?: string;
+  VITE_API_URL?: string;
+  VITE_API_URLS?: string;
+  VITE_SHOW_INSTANCE_SELECTOR?: string;
+}
+
+declare global {
+  interface Window {
+    __DPG_UI_CONFIG__?: RuntimeConfig;
+  }
+}
+
 class ApiConfig {
   private endpoints: ApiEndpoint[] = [];
   private selectedKey: string | null = null;
@@ -14,8 +27,13 @@ class ApiConfig {
   }
 
   private loadFromEnv() {
-    const urlsJson = import.meta.env.VITE_API_URLS;
+    const runtimeConfig = window.__DPG_UI_CONFIG__ ?? {};
+    const urlsJson =
+      runtimeConfig.VITE_API_URLS ||
+      import.meta.env.VITE_API_URLS;
     const defaultUrl =
+      runtimeConfig.VITE_DEFAULT_API_URL ||
+      runtimeConfig.VITE_API_URL ||
       import.meta.env.VITE_DEFAULT_API_URL ||
       import.meta.env.VITE_API_URL ||
       'http://localhost:3000';
@@ -70,7 +88,13 @@ class ApiConfig {
   }
 
   isDevMode(): boolean {
-    if (import.meta.env.VITE_SHOW_INSTANCE_SELECTOR === 'true') return true;
+    const runtimeConfig = window.__DPG_UI_CONFIG__ ?? {};
+    if (
+      runtimeConfig.VITE_SHOW_INSTANCE_SELECTOR === 'true' ||
+      import.meta.env.VITE_SHOW_INSTANCE_SELECTOR === 'true'
+    ) {
+      return true;
+    }
     return import.meta.env.DEV;
   }
 }

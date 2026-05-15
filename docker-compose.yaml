@@ -74,8 +74,6 @@ services:
     build:
       context: .
       dockerfile: apps/ui/Dockerfile
-      args:
-        VITE_DEFAULT_API_URL: ${API_DOMAIN}:${API_PORT}
     image: dpg-monorepo/ui:local
     container_name: dpg-ui
     restart: always
