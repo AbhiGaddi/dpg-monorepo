@@ -1,6 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
-import { db } from '../../db/postgres/drizzle_config';
+import { db } from '@api/db/postgres/drizzle_config';
 import { items } from '@dpg/database';
+import { mergeItemStateWithPrivate } from '@dpg/schemas';
 
 export type ItemFetchFilters = {
   item_id?: string;
@@ -8,6 +9,7 @@ export type ItemFetchFilters = {
   item_domain: string;
   item_type?: string;
   created_by?: string;
+  aggregator_id?: string;
   item_instance_url?: string | null;
   item_schema_url?: string | null;
   item_state?: Record<string, unknown>;
@@ -16,6 +18,24 @@ export type ItemFetchFilters = {
   radius_meters?: number;
   limit: number;
   offset: number;
+  includePrivateState?: boolean;
+};
+
+const itemResponseColumns = {
+  item_network: items.item_network,
+  item_domain: items.item_domain,
+  item_type: items.item_type,
+  item_id: items.item_id,
+  item_instance_url: items.item_instance_url,
+  item_schema_url: items.item_schema_url,
+  item_state: items.item_state,
+  item_private_state: items.item_private_state,
+  item_latitude: items.item_latitude,
+  item_longitude: items.item_longitude,
+  created_by: items.created_by,
+  aggregator_id: items.aggregator_id,
+  created_at: items.created_at,
+  updated_at: items.updated_at,
 };
 
 function buildWhereClause(filters: Omit<ItemFetchFilters, 'limit' | 'offset'>) {
@@ -34,6 +54,10 @@ function buildWhereClause(filters: Omit<ItemFetchFilters, 'limit' | 'offset'>) {
 
   if (filters.created_by) {
     conditions.push(eq(items.created_by, filters.created_by));
+  }
+
+  if (filters.aggregator_id) {
+    conditions.push(eq(items.aggregator_id, filters.aggregator_id));
   }
 
   if (filters.item_instance_url) {
@@ -78,7 +102,7 @@ function buildWhereClause(filters: Omit<ItemFetchFilters, 'limit' | 'offset'>) {
 }
 
 export async function countLocalItems(
-  filters: Omit<ItemFetchFilters, 'limit' | 'offset'>
+  filters: Omit<ItemFetchFilters, 'limit' | 'offset' | 'includePrivateState'>
 ) {
   const whereClause = buildWhereClause(filters);
   const [{ count }] = await db
@@ -95,7 +119,7 @@ export async function fetchLocalItems(filters: ItemFetchFilters) {
   const whereClause = buildWhereClause(filters);
   const total = await countLocalItems(filters);
   const result = await db
-    .select()
+    .select(itemResponseColumns)
     .from(items)
     .where(whereClause)
     .orderBy(sql`${items.created_at} DESC`)
@@ -108,6 +132,15 @@ export async function fetchLocalItems(filters: ItemFetchFilters) {
       limit: filters.limit,
       offset: filters.offset,
     },
-    items: result,
+    items: result.map((item) => {
+      const { item_private_state, ...responseItem } = item;
+
+      return {
+        ...responseItem,
+        item_state: filters.includePrivateState
+          ? mergeItemStateWithPrivate(item.item_state, item_private_state)
+          : item.item_state,
+      };
+    }),
   };
 }

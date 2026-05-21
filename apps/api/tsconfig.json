@@ -4,8 +4,13 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@api/*": [
+        "./*"
+      ],
       "@dpg/*": [
         "../../packages/*/src"
       ]
@@ -17,6 +22,7 @@
   },
   "include": [
     "src",
+    "scripts",
     "types.d.ts"
   ]
 }
